@@ -1,6 +1,8 @@
 # Page Layouts Implementation Plan
 
-## Current Problem
+## Status: IMPLEMENTED
+
+## Original Problem
 The current export functionality only writes plain `.txt` files with no formatting whatsoever. The `export_txt()` function in `app/app.py:124-133` simply dumps text content - no styling, no structure.
 
 ## What You Want

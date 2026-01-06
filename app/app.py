@@ -3,6 +3,7 @@ import re
 from glob import glob
 
 import gradio as gr
+from layouts import export_formatted_pdf, get_layout_choices
 from process import (
     diff_texts,
     extract_docx,
@@ -131,6 +132,24 @@ def export_txt(strings):
         return gr.update(value=file_path, visible=True)
     else:
         return gr.update(visible=False)
+
+
+def export_document(content, layout_name, title, author):
+    """Export the translated content to a formatted PDF."""
+    if not content:
+        return gr.update(visible=False)
+
+    try:
+        file_path = export_formatted_pdf(
+            content=content,
+            layout_name=layout_name,
+            title=title,
+            author=author,
+            output_dir="outputs",
+        )
+        return gr.update(value=file_path, visible=True)
+    except Exception as e:
+        raise gr.Error(f"Failed to export PDF: {e}") from e
 
 
 def switch(source_lang, source_text, target_lang, output_final):
@@ -311,6 +330,23 @@ with gr.Blocks(theme="soft", css=CSS, fill_height=True) as demo:
                     value=60,
                     step=1,
                 )
+            with gr.Accordion("Page Layout", open=True):
+                layout_preset = gr.Dropdown(
+                    label="Layout Style",
+                    choices=get_layout_choices(),
+                    value="Book",
+                    info="Select document layout format",
+                )
+                book_title = gr.Textbox(
+                    label="Document Title",
+                    placeholder="Enter title for title page",
+                    max_lines=1,
+                )
+                book_author = gr.Textbox(
+                    label="Author",
+                    placeholder="Optional author name",
+                    max_lines=1,
+                )
 
         with gr.Column(scale=4):
             source_text = gr.Textbox(
@@ -335,6 +371,7 @@ with gr.Blocks(theme="soft", css=CSS, fill_height=True) as demo:
     with gr.Row():
         submit = gr.Button(value="Translate")
         upload = gr.UploadButton(label="Upload", file_types=["text"])
+        export_pdf_btn = gr.Button(value="Export PDF", variant="secondary")
         export = gr.DownloadButton(visible=False)
         clear = gr.ClearButton(
             [source_text, output_init, output_reflect, output_final]
@@ -380,7 +417,13 @@ with gr.Blocks(theme="soft", css=CSS, fill_height=True) as demo:
         outputs=[output_init, output_reflect, output_final, output_diff],
     )
     upload.upload(fn=read_doc, inputs=upload, outputs=source_text)
-    output_diff.change(fn=export_txt, inputs=output_final, outputs=[export])
+
+    # PDF export button handler
+    export_pdf_btn.click(
+        fn=export_document,
+        inputs=[output_final, layout_preset, book_title, book_author],
+        outputs=[export],
+    )
 
     submit.click(fn=close_btn_show, outputs=[clear, close])
     output_diff.change(
